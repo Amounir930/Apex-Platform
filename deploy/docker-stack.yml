@@ -196,7 +196,7 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    command: 
+    entrypoint: 
       - "sh"
       - "-c"
       - |
