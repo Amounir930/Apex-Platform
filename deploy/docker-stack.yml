@@ -103,7 +103,7 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    entrypoint: ["sh", "-c", "export DATABASE_URL=\"postgres://postgres:$(cat /run/secrets/db_password)@db:5432/unleash?sslmode=disable\" && /unleash/unleash-server"]
+    entrypoint: ["sh", "-c", "export DATABASE_URL=\"postgres://postgres:$$(cat /run/secrets/db_password)@db:5432/unleash?sslmode=disable\" && /unleash/unleash-server"]
     networks:
       - apex-network
     secrets:
