@@ -109,7 +109,7 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 180s
+      start_period: 300s
 
   # --- APP SERVICES (Placeholder: traefik/whoami for initial test) ---
   api:
@@ -179,6 +179,7 @@ services:
 
   ollama:
     image: ollama/ollama:0.1.48
+    command: serve
     networks:
       - apex-network
     volumes:
@@ -213,9 +214,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4GB
+          memory: 1GB
         reservations:
-          memory: 2GB
+          memory: 512MB
 
   signoz-query-service:
     image: "signoz/query-service:0.45.0"
