@@ -64,7 +64,7 @@ function formatErrors(errors: z.ZodError): string {
 /**
  * Protocol Alpha 1: Type-Safe Export & Final Validation
  */
-export function validateEnv(appType: AppType) {
+export function validateEnv<T extends AppType>(appType: T): Config<T> {
   const mergedEnv = mergeSecrets();
   const schema = commonSchema.merge(appSchemas[appType]);
   
@@ -76,7 +76,7 @@ export function validateEnv(appType: AppType) {
   }
 
   // Deep freeze the config to ensure it remains the immutable source of truth
-  return Object.freeze(result.data);
+  return Object.freeze(result.data) as unknown as Config<T>;
 }
 
 // Re-export types for application use

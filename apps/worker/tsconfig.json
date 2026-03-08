@@ -1,8 +1,8 @@
 {
   "extends": "../../packages/typescript-config-apex/base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "./dist",
+    "baseUrl": "./"
   },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"]
 }

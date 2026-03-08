@@ -1,0 +1,11 @@
+{
+  "extends": "../../packages/typescript-config-apex/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"]
+}
