@@ -100,10 +100,15 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    # Using shell expansion to build DATABASE_URL from secret correctly
-    entrypoint: ["sh", "-c", "export DATABASE_URL=postgres://postgres:$$(cat /run/secrets/db_password | tr -d '\\n\\r')@db:5432/unleash?sslmode=disable && exec /unleash/unleash-server"]
     networks:
       - apex-network
+    environment:
+      DATABASE_HOST: db
+      DATABASE_NAME: unleash
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD_FILE: /run/secrets/db_password
+      # Ensure DATABASE_URL is NOT set to avoid conflicts
+      DATABASE_SSL: "false"
     secrets:
       - db_password
     deploy:
@@ -201,12 +206,14 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    # Overriding entrypoint to ensure SQLite path exists AND STORAGE_TYPE is explicitly set
-    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && chmod 777 /var/lib/signoz && export STORAGE_TYPE=clickhouse && export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000 && export JWT_SECRET=apex_jwt_secret_2026 && export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db && exec ./query-service"]
+    command: ["-config=/etc/query-service/config.yaml"] # Use default if possible or flags
     networks:
       - apex-network
     environment:
       STORAGE_TYPE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
+      JWT_SECRET: "apex_jwt_secret_2026"
+      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
     volumes:
       - signoz_db:/var/lib/signoz
     deploy:
