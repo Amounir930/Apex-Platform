@@ -1,0 +1,251 @@
+version: '3.8'
+
+services:
+  # --- INFRASTRUCTURE: API Gateway ---
+  gateway:
+    image: traefik:v3.1
+    command:
+      - "--providers.docker.swarm=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=admin@60sec.shop"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - apex-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1GB
+
+  # --- CORE DATABASES ---
+  db:
+    image: postgres:16-alpine
+    networks:
+      - apex-network
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2GB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:7-alpine
+    networks:
+      - apex-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512MB
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+
+  # --- STORAGE & FEATURE MGMT ---
+  storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - apex-network
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+    secrets:
+      - minio_root_user
+      - minio_root_password
+    volumes:
+      - minio_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2GB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+
+  unleash:
+    image: unleashorg/unleash-server:latest
+    networks:
+      - apex-network
+    environment:
+      DATABASE_URL: "postgres://postgres:password@db:5432/unleash" # Simplified for now
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1GB
+
+  # --- APP SERVICES (Placeholder: traefik/whoami for initial test) ---
+  api:
+    image: traefik/whoami
+    networks:
+      - apex-network
+    deploy:
+      replicas: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.api.rule=Host(`api.60sec.shop`)"
+        - "traefik.http.routers.api.entrypoints=web"
+        - "traefik.http.services.api.loadbalancer.server.port=80"
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2GB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+
+  worker:
+    image: traefik/whoami
+    networks:
+      - apex-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2GB
+
+  storefront:
+    image: traefik/whoami
+    networks:
+      - apex-network
+    deploy:
+      replicas: 2
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.storefront.rule=Host(`60sec.shop`) || Host(`localhost`)"
+        - "traefik.http.routers.storefront.entrypoints=web"
+        - "traefik.http.services.storefront.loadbalancer.server.port=80"
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1GB
+
+  # --- AI & VECTOR SEARCH ---
+  qdrant:
+    image: qdrant/qdrant:latest
+    networks:
+      - apex-network
+    volumes:
+      - qdrant_data:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4GB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 20s
+
+  ollama:
+    image: ollama/ollama:latest
+    networks:
+      - apex-network
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8GB
+        reservations:
+          # GPU reservation protocol (Disabled for initial compatibility test)
+          # devices:
+          #   - driver: nvidia
+          #     count: 1
+          #     capabilities: [gpu]
+          memory: 4GB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+
+  # --- OBSERVABILITY ---
+  signoz-clickhouse:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    networks:
+      - apex-network
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 8GB
+        reservations:
+          memory: 4GB
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:0.102.0
+    networks:
+      - apex-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1GB
+
+  signoz-frontend:
+    image: signoz/frontend:0.45.0
+    networks:
+      - apex-network
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.signoz.rule=Host(`monitor.60sec.shop`)"
+        - "traefik.http.routers.signoz.entrypoints=websecure"
+        - "traefik.http.routers.signoz.tls.certresolver=myresolver"
+        - "traefik.http.services.signoz.loadbalancer.server.port=3301"
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512MB
+
+networks:
+  apex-network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+
+volumes:
+  db_data:
+  qdrant_data:
+  ollama_data:
+  clickhouse_data:
+  minio_data:
+  letsencrypt:
+
+secrets:
+  db_password:
+    external: true
+  minio_root_user:
+    external: true
+  minio_root_password:
+    external: true
