@@ -228,6 +228,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 180s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
@@ -245,6 +246,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 180s
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -264,6 +266,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 180s
 
 networks:
   apex-network:
