@@ -193,6 +193,8 @@ services:
     image: clickhouse/clickhouse-server:24.1-alpine
     networks:
       - apex-network
+    environment:
+      - CLICKHOUSE_LISTEN_HOST=0.0.0.0
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --ping || exit 1"]
       interval: 20s
@@ -261,6 +263,11 @@ services:
       resources:
         limits:
           memory: 256MB
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3301 || exit 1"]
       interval: 10s
