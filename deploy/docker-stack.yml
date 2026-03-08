@@ -252,6 +252,7 @@ services:
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
+    command: ["sh", "-c", "until getent hosts signoz-query-service; do echo waiting for query-service dns; sleep 2; done; nginx -g 'daemon off;'"]
     networks:
       - apex-network
     deploy:
