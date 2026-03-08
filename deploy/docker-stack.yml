@@ -198,7 +198,8 @@ services:
     networks:
       - apex-network
     environment:
-      - ClickHouseUrl=tcp://signoz-clickhouse:9000
+      - STORAGE_TYPE=clickhouse
+      - CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
       - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
     volumes:
       - signoz_db:/var/lib/signoz
@@ -210,8 +211,11 @@ services:
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     deploy:
       resources:
         limits:
