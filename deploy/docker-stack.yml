@@ -29,6 +29,11 @@ services:
         limits:
           cpus: '1.0'
           memory: 1GB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
 
   # --- CORE DATABASES ---
   db:
@@ -47,11 +52,17 @@ services:
         limits:
           cpus: '1.0'
           memory: 2GB
+        reservations:
+          memory: 512MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 60s
 
   cache:
     image: redis:7-alpine
@@ -62,9 +73,15 @@ services:
         limits:
           cpus: '0.5'
           memory: 512MB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
+      start_period: 60s
 
   # --- STORAGE & FEATURE MGMT ---
   storage:
@@ -87,10 +104,16 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 2GB
+          memory: 1GB
+        reservations:
+          memory: 256MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
+      start_period: 60s
 
   unleash:
     image: unleashorg/unleash-server:latest
@@ -104,14 +127,19 @@ services:
         limits:
           cpus: '0.5'
           memory: 1GB
+        reservations:
+          memory: 256MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4242/health"]
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 300s
+      start_period: 60s
 
-  # --- APP SERVICES (Placeholder: traefik/whoami for initial test) ---
+  # --- APP SERVICES ---
   api:
     image: traefik/whoami
     networks:
@@ -127,8 +155,13 @@ services:
         - "traefik.http.services.api.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '1.0'
-          memory: 2GB
+          cpus: '0.5'
+          memory: 512MB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
 
   worker:
     image: traefik/whoami
@@ -138,8 +171,13 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '1.0'
-          memory: 2GB
+          cpus: '0.5'
+          memory: 512MB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
 
   storefront:
     image: traefik/whoami
@@ -156,8 +194,13 @@ services:
         - "traefik.http.services.storefront.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '1.0'
-          memory: 1GB
+          cpus: '0.5'
+          memory: 512MB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
@@ -169,9 +212,14 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 1GB
+        reservations:
+          memory: 256MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/health || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/healthz || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -187,9 +235,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 4GB
         reservations:
-          memory: 1G
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -221,7 +269,7 @@ services:
         limits:
           memory: 4GB
         reservations:
-          memory: 1GB
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -235,15 +283,18 @@ services:
       STORAGE: "clickhouse"
       ClickHouseUrl: "tcp://signoz-clickhouse:9000"
       SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
-    secrets:
-      - jwt_secret
+      JWT_SECRET: "apex_jwt_secret_2026"
     volumes:
       - "signoz_db:/var/lib/signoz"
     deploy:
       resources:
         limits:
-          memory: "1GB"
+          memory: 1GB
+        reservations:
+          memory: 256MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
       interval: 10s
@@ -261,7 +312,12 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512MB
+          memory: 1GB
+        reservations:
+          memory: 128MB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:4317 || exit 1"]
       interval: 10s
@@ -284,7 +340,7 @@ services:
         limits:
           memory: 512MB
         reservations:
-          memory: 256MB
+          memory: 128MB
       restart_policy:
         condition: on-failure
         delay: 30s
@@ -295,7 +351,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 300s
+      start_period: 60s
 
 networks:
   apex-network:
@@ -318,6 +374,4 @@ secrets:
   minio_root_user:
     external: true
   minio_root_password:
-    external: true
-  jwt_secret:
     external: true
