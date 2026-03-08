@@ -202,7 +202,7 @@ services:
     environment:
       - CLICKHOUSE_LISTEN_HOST=0.0.0.0
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --ping || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping || exit 1"]
       interval: 20s
       timeout: 15s
       retries: 10
