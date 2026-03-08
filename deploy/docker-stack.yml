@@ -199,12 +199,13 @@ services:
     networks:
       - apex-network
     environment:
-      - STORAGE_TYPE=clickhouse
-      - CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
-      - ClickHouseUrl=tcp://signoz-clickhouse:9000
-      - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
-      - JWT_SECRET=apex_jwt_secret_2026
-      - GODEBUG=netdns=go
+      STORAGE_TYPE: clickhouse
+      SIGNOZ_STORAGE: clickhouse
+      CLICKHOUSE_URL: tcp://signoz-clickhouse:9000
+      ClickHouseUrl: tcp://signoz-clickhouse:9000
+      SIGNOZ_LOCAL_DB_PATH: /var/lib/signoz/signoz.db
+      JWT_SECRET: apex_jwt_secret_2026
+      GODEBUG: netdns=go
     volumes:
       - signoz_db:/var/lib/signoz
     deploy:
