@@ -193,10 +193,11 @@ services:
     networks:
       - apex-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping || exit 1"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "clickhouse-client --ping || exit 1"]
+      interval: 15s
+      timeout: 10s
       retries: 5
+      start_period: 60s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     deploy:
