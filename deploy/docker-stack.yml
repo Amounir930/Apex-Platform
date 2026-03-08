@@ -196,17 +196,19 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    command: ["-config=/etc/signoz-query-config.yaml"]
+    command: 
+      - "sh"
+      - "-c"
+      - |
+        export STORAGE_TYPE=clickhouse
+        export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
+        export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
+        export JWT_SECRET=apex_jwt_secret_2026
+        ./query-service
     networks:
       - apex-network
-    environment:
-      - STORAGE_TYPE=clickhouse
-      - CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
-      - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
-      - JWT_SECRET=apex_jwt_secret_2026
     volumes:
       - signoz_db:/var/lib/signoz
-      - ./signoz-query-config.yaml:/etc/signoz-query-config.yaml
     deploy:
       resources:
         limits:
