@@ -175,7 +175,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 300s
+      start_period: 60s
 
   ollama:
     image: ollama/ollama:0.1.48
@@ -188,12 +188,17 @@ services:
       resources:
         limits:
           memory: 4G
+        reservations:
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
       interval: 30s
       timeout: 15s
       retries: 5
-      start_period: 300s # Models can take a long time to load
+      start_period: 60s
 
   # --- OBSERVABILITY ---
   signoz-clickhouse:
@@ -207,16 +212,19 @@ services:
       interval: 20s
       timeout: 15s
       retries: 10
-      start_period: 300s
+      start_period: 60s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/force-ipv4.xml
     deploy:
       resources:
         limits:
-          memory: 1GB
+          memory: 4GB
         reservations:
-          memory: 512MB
+          memory: 1GB
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
 
   signoz-query-service:
     image: "signoz/query-service:0.45.0"
@@ -227,7 +235,9 @@ services:
       STORAGE: "clickhouse"
       ClickHouseUrl: "tcp://signoz-clickhouse:9000"
       SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
-      JWT_SECRET: "apex_jwt_secret_2026"
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+    secrets:
+      - jwt_secret
     volumes:
       - "signoz_db:/var/lib/signoz"
     deploy:
@@ -239,7 +249,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 300s
+      start_period: 60s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
@@ -257,7 +267,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 300s
+      start_period: 60s
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -272,6 +282,8 @@ services:
         - "traefik.http.services.signoz.loadbalancer.server.port=3301"
       resources:
         limits:
+          memory: 512MB
+        reservations:
           memory: 256MB
       restart_policy:
         condition: on-failure
@@ -306,4 +318,6 @@ secrets:
   minio_root_user:
     external: true
   minio_root_password:
+    external: true
+  jwt_secret:
     external: true
