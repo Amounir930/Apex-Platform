@@ -215,17 +215,18 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
+    command: ["-config=/root/config/prometheus.yml"]
     networks:
       - apex-network
     environment:
-      STORAGE: clickhouse
-      STORAGE_TYPE: clickhouse
-      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
-      # Redundant but essential for some versions
-      SIGNOZ_TELEMETRYSTORE_PROVIDER: clickhouse
-      SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: "tcp://signoz-clickhouse:9000"
-      JWT_SECRET: apex_jwt_secret_2026
-      SIGNOZ_LOCAL_DB_PATH: /tmp/signoz.db
+      # Official SigNoz environment variable names (Case Sensitive)
+      ClickHouseUrl: "tcp://signoz-clickhouse:9000"
+      STORAGE: "clickhouse"
+      # Redundant but safer
+      STORAGE_TYPE: "clickhouse"
+      JWT_SECRET: "apex_jwt_secret_2026"
+      SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
+      GODEBUG: "netdns=go"
     deploy:
       replicas: 1
       placement:
