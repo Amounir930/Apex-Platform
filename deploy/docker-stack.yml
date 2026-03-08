@@ -102,6 +102,11 @@ services:
         limits:
           cpus: '0.5'
           memory: 1GB
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4242/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # --- APP SERVICES (Placeholder: traefik/whoami for initial test) ---
   api:
@@ -149,7 +154,7 @@ services:
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.10.1
     networks:
       - apex-network
     volumes:
@@ -157,11 +162,16 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 4GB
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.1.48
     networks:
       - apex-network
     volumes:
@@ -169,21 +179,29 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4.0'
-          memory: 8GB
+          memory: 12G
         reservations:
-          # GPU reservation protocol (Disabled for initial compatibility test)
-          # devices:
-          #   - driver: nvidia
-          #     count: 1
-          #     capabilities: [gpu]
-          memory: 4GB
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # --- OBSERVABILITY ---
   signoz-clickhouse:
     image: clickhouse/clickhouse-server:24.1-alpine
     networks:
       - apex-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     deploy:
@@ -210,6 +228,11 @@ services:
         limits:
           cpus: '1.0'
           memory: "2GB"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
@@ -223,6 +246,11 @@ services:
         limits:
           cpus: '1.0'
           memory: 1GB
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4317"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -238,6 +266,11 @@ services:
         limits:
           cpus: '0.5'
           memory: 512MB
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3301"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 networks:
   apex-network:

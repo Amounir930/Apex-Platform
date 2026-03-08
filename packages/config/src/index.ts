@@ -49,13 +49,9 @@ function formatErrors(errors: z.ZodError): string {
   for (const issue of errors.issues) {
     const path = issue.path.join('.');
     const message = issue.message;
-    // Extract description from Zod metadata if available (requires access to schema)
-    const description = "Check documentation for details";
-
-    output += `\x1b[33m%-25s\x1b[0m | \x1b[31m%-30s\x1b[0m | %-40s\n`
+    output += `\x1b[33m%-25s\x1b[0m | \x1b[31m%-30s\x1b[0m\n`
       .replace('%-25s', path.padEnd(25))
-      .replace('%-30s', message.padEnd(30))
-      .replace('%-40s', description.padEnd(40));
+      .replace('%-30s', message.padEnd(30));
   }
 
   return output + separator;
