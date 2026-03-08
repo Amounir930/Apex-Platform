@@ -209,6 +209,7 @@ services:
       start_period: 300s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/force-ipv4.xml
     deploy:
       resources:
         limits:
@@ -218,7 +219,7 @@ services:
 
   signoz-query-service:
     image: "signoz/query-service:0.45.0"
-    entrypoint: ["sh", "-c", "until getent hosts signoz-clickhouse; do echo waiting for clickhouse dns; sleep 2; done; ./query-service"]
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-clickhouse; do echo waiting for clickhouse tasks; sleep 2; done; ./query-service"]
     networks:
       - "apex-network"
     environment:
@@ -241,7 +242,7 @@ services:
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
-    entrypoint: ["sh", "-c", "until getent hosts signoz-query-service; do echo waiting for query-service dns; sleep 2; done; /otelcol --config=/etc/otel-collector-config.yaml"]
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do echo waiting for query-service tasks; sleep 2; done; /otelcol --config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
     volumes:
@@ -259,7 +260,7 @@ services:
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
-    entrypoint: ["sh", "-c", "until getent hosts signoz-query-service; do echo waiting for query-service dns; sleep 2; done; nginx -g 'daemon off;'"]
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do echo waiting for query-service tasks; sleep 2; done; nginx -g 'daemon off;'"]
     networks:
       - apex-network
     deploy:
