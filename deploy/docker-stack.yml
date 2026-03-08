@@ -104,9 +104,10 @@ services:
           memory: 1GB
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4242/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
 
   # --- APP SERVICES (Placeholder: traefik/whoami for initial test) ---
   api:
@@ -165,10 +166,10 @@ services:
           memory: 2G
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
 
   ollama:
     image: ollama/ollama:0.1.48
@@ -183,9 +184,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      timeout: 15s
+      retries: 5
+      start_period: 300s # Models can take a long time to load
 
   # --- OBSERVABILITY ---
   signoz-clickhouse:
@@ -194,10 +195,10 @@ services:
       - apex-network
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --ping || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 20s
+      timeout: 15s
+      retries: 10
+      start_period: 300s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     deploy:
