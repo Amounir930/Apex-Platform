@@ -107,8 +107,8 @@ services:
       DATABASE_NAME: unleash
       DATABASE_USERNAME: postgres
       DATABASE_SSL: "false"
-    # Using $$ for interpolation to avoid Docker Compose errors
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && exec node dist/index.js"]
+    # Correct entrypoint as found by inspect dist/server.js
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && exec node dist/server.js"]
     secrets:
       - db_password
     deploy:
@@ -222,7 +222,8 @@ services:
     networks:
       - apex-network
     environment:
-      STORAGE_TYPE: "clickhouse"
+      STORAGE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
       JWT_SECRET: "apex_jwt_secret_2026"
       SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
     deploy:
