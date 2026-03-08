@@ -201,10 +201,8 @@ services:
     environment:
       STORAGE_TYPE: "clickhouse"
       CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
-      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
+      SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
       JWT_SECRET: "apex_jwt_secret_2026"
-    volumes:
-      - "signoz_db:/var/lib/signoz"
     deploy:
       resources:
         limits:
