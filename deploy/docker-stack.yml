@@ -165,11 +165,11 @@ services:
         limits:
           memory: 2G
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:6333/healthz"]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 300s
 
   ollama:
     image: ollama/ollama:0.1.48
@@ -231,7 +231,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 180s
+      start_period: 300s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
@@ -249,7 +249,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 180s
+      start_period: 300s
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -275,7 +275,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 180s
+      start_period: 300s
 
 networks:
   apex-network:
