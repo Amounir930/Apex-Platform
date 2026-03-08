@@ -107,8 +107,7 @@ services:
       DATABASE_NAME: unleash
       DATABASE_USERNAME: postgres
       DATABASE_SSL: "false"
-    # Correct entrypoint as found by inspect dist/server.js
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && exec node dist/server.js"]
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && exec node dist/app.js"]
     secrets:
       - db_password
     deploy:
@@ -191,7 +190,8 @@ services:
         reservations:
           memory: 1GB
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e 'GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      # Use a shell-based TCP check since curl/wget are missing
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q \"200 OK\""]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -223,7 +223,6 @@ services:
       - apex-network
     environment:
       STORAGE: "clickhouse"
-      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
       JWT_SECRET: "apex_jwt_secret_2026"
       SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
     deploy:
