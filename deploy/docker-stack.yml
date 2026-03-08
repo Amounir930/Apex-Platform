@@ -190,7 +190,7 @@ services:
         reservations:
           memory: 512MB
     healthcheck:
-      test: ["CMD-SHELL", "ls /qdrant/storage || exit 1"]
+      test: ["CMD-SHELL", "/bin/sh -c 'ps aux | grep qdrant' || exit 1"]
       interval: 20s
       start_period: 60s
 
@@ -215,13 +215,15 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
+    command: ["-config", "/root/config/prometheus.yml"]
     networks:
       - apex-network
     environment:
-      STORAGE_TYPE: "clickhouse"
-      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
-      JWT_SECRET: "apex_jwt_secret_2026"
-      SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
+      STORAGE: clickhouse
+      STORAGE_TYPE: clickhouse
+      CLICKHOUSE_URL: tcp://signoz-clickhouse:9000
+      JWT_SECRET: apex_jwt_secret_2026
+      SIGNOZ_LOCAL_DB_PATH: /tmp/signoz.db
     deploy:
       replicas: 1
       placement:
