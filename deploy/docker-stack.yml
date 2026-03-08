@@ -30,7 +30,7 @@ services:
           cpus: '1.0'
           memory: 1GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -53,7 +53,7 @@ services:
           cpus: '1.0'
           memory: 2GB
         reservations:
-          memory: 512MB
+          memory: 1GB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -62,7 +62,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 120s
 
   cache:
     image: redis:7-alpine
@@ -72,16 +72,16 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 512MB
+          memory: 1GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      start_period: 60s
+      start_period: 120s
 
   # --- STORAGE & FEATURE MGMT ---
   storage:
@@ -104,16 +104,16 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1GB
+          memory: 2GB
         reservations:
-          memory: 256MB
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
-      start_period: 60s
+      start_period: 120s
 
   unleash:
     image: unleashorg/unleash-server:latest
@@ -128,7 +128,7 @@ services:
           cpus: '0.5'
           memory: 1GB
         reservations:
-          memory: 256MB
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -137,7 +137,7 @@ services:
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
 
   # --- APP SERVICES ---
   api:
@@ -155,10 +155,10 @@ services:
         - "traefik.http.services.api.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512MB
+          cpus: '1.0'
+          memory: 2GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -171,10 +171,10 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512MB
+          cpus: '1.0'
+          memory: 2GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -194,10 +194,10 @@ services:
         - "traefik.http.services.storefront.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512MB
+          cpus: '1.0'
+          memory: 2GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -212,9 +212,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1GB
+          memory: 2GB
         reservations:
-          memory: 256MB
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -223,7 +223,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
   ollama:
     image: ollama/ollama:0.1.48
@@ -237,7 +237,7 @@ services:
         limits:
           memory: 4GB
         reservations:
-          memory: 512MB
+          memory: 1GB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -246,7 +246,7 @@ services:
       interval: 30s
       timeout: 15s
       retries: 5
-      start_period: 60s
+      start_period: 120s
 
   # --- OBSERVABILITY ---
   signoz-clickhouse:
@@ -260,7 +260,7 @@ services:
       interval: 20s
       timeout: 15s
       retries: 10
-      start_period: 60s
+      start_period: 120s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/force-ipv4.xml
@@ -269,7 +269,7 @@ services:
         limits:
           memory: 4GB
         reservations:
-          memory: 512MB
+          memory: 1GB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -289,9 +289,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1GB
+          memory: 2GB
         reservations:
-          memory: 256MB
+          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -300,7 +300,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
@@ -312,9 +312,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1GB
+          memory: 2GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -323,7 +323,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -338,9 +338,9 @@ services:
         - "traefik.http.services.signoz.loadbalancer.server.port=3301"
       resources:
         limits:
-          memory: 512MB
+          memory: 1GB
         reservations:
-          memory: 128MB
+          memory: 256MB
       restart_policy:
         condition: on-failure
         delay: 30s
@@ -351,7 +351,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 60s
+      start_period: 120s
 
 networks:
   apex-network:
