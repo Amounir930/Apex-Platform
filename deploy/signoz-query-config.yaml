@@ -1,0 +1,8 @@
+# SigNoz Query Service Config
+storage: clickhouse
+clickhouse:
+  url: tcp://signoz-clickhouse:9000
+  database: signoz_traces
+  # user: default
+  # password: ""
+jwt_secret: apex_jwt_secret_2026
