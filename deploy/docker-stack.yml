@@ -107,7 +107,8 @@ services:
       DATABASE_NAME: unleash
       DATABASE_USERNAME: postgres
       DATABASE_SSL: "false"
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$(cat /run/secrets/db_password) && exec node dist/index.js"]
+    # Using $$ for interpolation to avoid Docker Compose errors
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && exec node dist/index.js"]
     secrets:
       - db_password
     deploy:
