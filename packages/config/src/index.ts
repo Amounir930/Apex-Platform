@@ -26,8 +26,9 @@ function mergeSecrets(): Record<string, string | undefined> {
             env[file] = value;
           }
         }
-      } catch (e) {
-        // Silently ignore secret read errors as per Protocol Delta 5 (handled by Zod later)
+      } catch (error) {
+        // Log reading error for debugging but don't halt; Zod will catch missing values later
+        console.warn(`[Config] Failed to read secret file "${file}":`, error instanceof Error ? error.message : error);
       }
     }
   }

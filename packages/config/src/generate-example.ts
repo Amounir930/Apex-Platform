@@ -16,12 +16,14 @@ function generateEnvExample() {
     '',
   ];
 
-  const processSchema = (schema: z.ZodObject<any>, title: string) => {
+  const processSchema = (schema: z.ZodObject<z.ZodRawShape>, title: string) => {
     lines.push(`# --- ${title} ---`);
     const shape = schema.shape;
     
     for (const key in shape) {
       const field = shape[key];
+      if (!field) continue;
+      
       const description = field.description || '';
       
       // Add comment if description exists
