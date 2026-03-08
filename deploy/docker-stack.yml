@@ -30,10 +30,7 @@ services:
         limits:
           memory: 1GB
         reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
+          memory: 256MB
 
   # --- CORE DATABASES ---
   db:
@@ -103,7 +100,8 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    entrypoint: ["sh", "-c", "export DATABASE_URL=\"postgres://postgres:$$(cat /run/secrets/db_password | tr -d '\\n\\r')@db:5432/unleash?sslmode=disable\" && /unleash/unleash-server"]
+    # Using shell expansion to build DATABASE_URL from secret correctly
+    entrypoint: ["sh", "-c", "export DATABASE_URL=postgres://postgres:$$(cat /run/secrets/db_password | tr -d '\\n\\r')@db:5432/unleash?sslmode=disable && exec /unleash/unleash-server"]
     networks:
       - apex-network
     secrets:
@@ -133,7 +131,7 @@ services:
         limits:
           memory: 512MB
         reservations:
-          memory: 64MB
+          memory: 128MB
 
   worker:
     image: traefik/whoami
@@ -145,7 +143,7 @@ services:
         limits:
           memory: 512MB
         reservations:
-          memory: 64MB
+          memory: 128MB
 
   storefront:
     image: traefik/whoami
@@ -157,7 +155,7 @@ services:
         limits:
           memory: 512MB
         reservations:
-          memory: 64MB
+          memory: 128MB
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
@@ -174,7 +172,7 @@ services:
         limits:
           memory: 2GB
         reservations:
-          memory: 512MB
+          memory: 1GB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/readyz || exit 1"]
       interval: 20s
@@ -195,7 +193,7 @@ services:
         limits:
           memory: 4GB
         reservations:
-          memory: 1GB
+          memory: 2GB
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 20s
@@ -203,9 +201,12 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    entrypoint: ["sh", "-c", "export STORAGE_TYPE=clickhouse && export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000 && export JWT_SECRET=apex_jwt_secret_2026 && export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db && mkdir -p /var/lib/signoz && chmod 777 /var/lib/signoz && until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
+    # Overriding entrypoint to ensure SQLite path exists AND STORAGE_TYPE is explicitly set
+    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && chmod 777 /var/lib/signoz && export STORAGE_TYPE=clickhouse && export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000 && export JWT_SECRET=apex_jwt_secret_2026 && export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db && exec ./query-service"]
     networks:
       - apex-network
+    environment:
+      STORAGE_TYPE: "clickhouse"
     volumes:
       - signoz_db:/var/lib/signoz
     deploy:
@@ -216,7 +217,7 @@ services:
         limits:
           memory: 2GB
         reservations:
-          memory: 256MB
+          memory: 512MB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
       interval: 20s
@@ -224,7 +225,7 @@ services:
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do sleep 5; done; /otelcol --config=/etc/otel-collector-config.yaml"]
+    command: ["--config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
     volumes:
@@ -235,26 +236,19 @@ services:
         limits:
           memory: 1GB
         reservations:
-          memory: 128MB
+          memory: 256MB
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do sleep 5; done; nginx -g 'daemon off;'"]
     networks:
       - apex-network
     deploy:
       replicas: 1
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.monitor.rule=Host(`monitor.60sec.shop`) || Host(`monitor.kitvet.com`)"
-        - "traefik.http.routers.monitor.entrypoints=websecure"
-        - "traefik.http.routers.monitor.tls.certresolver=myresolver"
-        - "traefik.http.services.monitor.loadbalancer.server.port=3301"
       resources:
         limits:
           memory: 512MB
         reservations:
-          memory: 64MB
+          memory: 128MB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3301 || exit 1"]
       interval: 20s
@@ -280,6 +274,4 @@ secrets:
   minio_root_user:
     external: true
   minio_root_password:
-    external: true
-  jwt_secret:
     external: true
