@@ -10,7 +10,7 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypointssecure.address=:443"
+      - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.myresolver.acme.email=admin@kitvet.com"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
@@ -23,14 +23,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - letsencrypt:/letsencrypt
     deploy:
+      replicas: 1
       placement:
         constraints: [node.role == manager]
       resources:
         limits:
-          cpus: '1.0'
           memory: 1GB
-        reservations:
-          memory: 128MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -42,7 +40,7 @@ services:
       - apex-network
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB: unleash
+      POSTGRES_DB: "unleash"
     secrets:
       - db_password
     volumes:
@@ -51,18 +49,10 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: '1.0'
           memory: 2GB
-        reservations:
-          memory: 512MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
-      timeout: 5s
-      retries: 5
       start_period: 60s
 
   cache:
@@ -70,27 +60,19 @@ services:
     networks:
       - apex-network
     deploy:
+      replicas: 1
       resources:
         limits:
-          cpus: '0.5'
           memory: 512MB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      start_period: 60s
+      start_period: 30s
 
   # --- STORAGE & FEATURE MGMT ---
   storage:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     networks:
       - apex-network
     environment:
@@ -102,15 +84,10 @@ services:
     volumes:
       - minio_data:/data
     deploy:
+      replicas: 1
       resources:
         limits:
-          cpus: '1.0'
           memory: 1GB
-        reservations:
-          memory: 256MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -121,24 +98,19 @@ services:
     networks:
       - apex-network
     environment:
-      DATABASE_URL: "postgres://postgres:apex_db_pass_2026@db:5432/unleash?sslmode=disable"
+      DATABASE_URL: "postgres://postgres:admin_secure_pass@db:5432/unleash?sslmode=disable"
       DATABASE_SSL: "false"
     deploy:
+      replicas: 1
       resources:
         limits:
-          cpus: '0.5'
           memory: 1GB
-        reservations:
-          memory: 256MB
       restart_policy:
         condition: on-failure
-        max_attempts: 3
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4242/health"]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      interval: 30s
+      start_period: 90s
 
   # --- APP SERVICES ---
   api:
@@ -151,18 +123,11 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.api.rule=Host(`api.60sec.shop`) || Host(`api.kitvet.com`)"
         - "traefik.http.routers.api.entrypoints=websecure"
-        - "traefik.http.routers.api.tls=true"
         - "traefik.http.routers.api.tls.certresolver=myresolver"
         - "traefik.http.services.api.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '0.5'
           memory: 512MB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
 
   worker:
     image: traefik/whoami
@@ -172,13 +137,7 @@ services:
       replicas: 2
       resources:
         limits:
-          cpus: '0.5'
           memory: 512MB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
 
   storefront:
     image: traefik/whoami
@@ -190,18 +149,11 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.storefront.rule=Host(`60sec.shop`) || Host(`kitvet.com`) || Host(`localhost`)"
         - "traefik.http.routers.storefront.entrypoints=websecure"
-        - "traefik.http.routers.storefront.tls=true"
         - "traefik.http.routers.storefront.tls.certresolver=myresolver"
         - "traefik.http.services.storefront.loadbalancer.server.port=80"
       resources:
         limits:
-          cpus: '0.5'
           memory: 512MB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
@@ -211,19 +163,17 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
       resources:
         limits:
-          memory: 1GB
-        reservations:
-          memory: 256MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
+          memory: 2GB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/readyz || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      interval: 20s
+      timeout: 10s
+      retries: 5
       start_period: 60s
 
   ollama:
@@ -234,120 +184,92 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
       resources:
         limits:
           memory: 4GB
-        reservations:
-          memory: 512MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
       interval: 30s
-      timeout: 15s
+      timeout: 20s
       retries: 5
       start_period: 120s
 
-  # --- OBSERVABILITY ---
+  # --- OBSERVABILITY (SigNoz) ---
   signoz-clickhouse:
     image: clickhouse/clickhouse-server:24.1-alpine
     networks:
       - apex-network
-    environment:
-      - CLICKHOUSE_LISTEN_HOST=0.0.0.0
-    healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
-      interval: 20s
-      timeout: 15s
-      retries: 10
-      start_period: 120s
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/force-ipv4.xml
     deploy:
+      replicas: 1
       resources:
         limits:
           memory: 4GB
-        reservations:
-          memory: 512MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 20s
+      start_period: 90s
 
   signoz-query-service:
-    image: "signoz/query-service:0.45.0"
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-clickhouse; do echo waiting for clickhouse tasks; sleep 2; done; ./query-service"]
+    image: signoz/query-service:0.45.0
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
     networks:
       - apex-network
     environment:
       STORAGE_TYPE: "clickhouse"
-      ClickHouseUrl: "tcp://signoz-clickhouse:9000"
-      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
       JWT_SECRET: "apex_jwt_secret_2026"
-    volumes:
-      - signoz_db:/var/lib/signoz
     deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
       resources:
         limits:
-          memory: 1GB
-        reservations:
-          memory: 256MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
+          memory: 2GB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      interval: 20s
       start_period: 90s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do echo waiting for query-service tasks; sleep 2; done; /otelcol --config=/etc/otel-collector-config.yaml"]
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do sleep 5; done; /otelcol --config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     deploy:
+      replicas: 1
       resources:
         limits:
           memory: 1GB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do echo waiting for query-service tasks; sleep 2; done; nginx -g 'daemon off;'"]
+    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-query-service; do sleep 5; done; nginx -g 'daemon off;'"]
     networks:
       - apex-network
     deploy:
+      replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.signoz.rule=Host(`monitor.kitvet.com`)"
-        - "traefik.http.routers.signoz.entrypoints=websecure"
-        - "traefik.http.routers.signoz.tls=true"
-        - "traefik.http.routers.signoz.tls.certresolver=myresolver"
-        - "traefik.http.services.signoz.loadbalancer.server.port=3301"
+        - "traefik.http.routers.monitor.rule=Host(`monitor.60sec.shop`) || Host(`monitor.kitvet.com`)"
+        - "traefik.http.routers.monitor.entrypoints=websecure"
+        - "traefik.http.routers.monitor.tls.certresolver=myresolver"
+        - "traefik.http.services.monitor.loadbalancer.server.port=3301"
       resources:
         limits:
           memory: 512MB
-        reservations:
-          memory: 128MB
-      restart_policy:
-        condition: on-failure
-        delay: 30s
-        max_attempts: 10
-        window: 120s
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3301 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      interval: 20s
       start_period: 60s
 
 networks:
