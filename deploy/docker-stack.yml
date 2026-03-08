@@ -204,6 +204,8 @@ services:
         export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
         export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
         export JWT_SECRET=apex_jwt_secret_2026
+        echo "DEBUG: STORAGE_TYPE=$STORAGE_TYPE"
+        echo "DEBUG: CLICKHOUSE_URL=$CLICKHOUSE_URL"
         ./query-service
     networks:
       - apex-network
