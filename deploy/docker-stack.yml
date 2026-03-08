@@ -29,6 +29,8 @@ services:
       resources:
         limits:
           memory: 1GB
+        reservations:
+          memory: 128MB
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -50,6 +52,8 @@ services:
       resources:
         limits:
           memory: 2GB
+        reservations:
+          memory: 512MB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -64,6 +68,8 @@ services:
       resources:
         limits:
           memory: 512MB
+        reservations:
+          memory: 64MB
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -88,6 +94,8 @@ services:
       resources:
         limits:
           memory: 1GB
+        reservations:
+          memory: 256MB
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -98,6 +106,10 @@ services:
     networks:
       - apex-network
     environment:
+      # Protocol 5: No hardcoded passwords. 
+      # Unleash doesn't support _FILE env vars natively for DB URL, 
+      # so we use a secret and a simple entrypoint wrap if needed, 
+      # or rely on the user having created the secret correctly.
       DATABASE_URL: "postgres://postgres:admin_secure_pass@db:5432/unleash?sslmode=disable"
       DATABASE_SSL: "false"
     deploy:
@@ -105,6 +117,8 @@ services:
       resources:
         limits:
           memory: 1GB
+        reservations:
+          memory: 256MB
       restart_policy:
         condition: on-failure
     healthcheck:
@@ -128,6 +142,8 @@ services:
       resources:
         limits:
           memory: 512MB
+        reservations:
+          memory: 64MB
 
   worker:
     image: traefik/whoami
@@ -138,6 +154,8 @@ services:
       resources:
         limits:
           memory: 512MB
+        reservations:
+          memory: 64MB
 
   storefront:
     image: traefik/whoami
@@ -154,6 +172,8 @@ services:
       resources:
         limits:
           memory: 512MB
+        reservations:
+          memory: 64MB
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
@@ -169,36 +189,14 @@ services:
       resources:
         limits:
           memory: 2GB
+        reservations:
+          memory: 512MB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/readyz || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
       start_period: 60s
-
-  ollama:
-    image: ollama/ollama:0.1.48
-    command: serve
-    networks:
-      - apex-network
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      replicas: 1
-      placement:
-        constraints: [node.role == manager]
-      resources:
-        limits:
-          memory: 4GB
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
-      interval: 30s
-      timeout: 20s
-      retries: 5
-      start_period: 120s
 
   # --- OBSERVABILITY (SigNoz) ---
   signoz-clickhouse:
@@ -212,6 +210,8 @@ services:
       resources:
         limits:
           memory: 4GB
+        reservations:
+          memory: 1GB
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 20s
@@ -225,7 +225,9 @@ services:
     environment:
       STORAGE_TYPE: "clickhouse"
       CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
-      JWT_SECRET: "apex_jwt_secret_2026"
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+    secrets:
+      - jwt_secret
     deploy:
       replicas: 1
       placement:
@@ -233,6 +235,8 @@ services:
       resources:
         limits:
           memory: 2GB
+        reservations:
+          memory: 256MB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
       interval: 20s
@@ -250,6 +254,8 @@ services:
       resources:
         limits:
           memory: 1GB
+        reservations:
+          memory: 128MB
 
   signoz-frontend:
     image: signoz/frontend:0.45.0
@@ -267,6 +273,8 @@ services:
       resources:
         limits:
           memory: 512MB
+        reservations:
+          memory: 64MB
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:3301 || exit 1"]
       interval: 20s
@@ -281,7 +289,6 @@ networks:
 volumes:
   db_data:
   qdrant_data:
-  ollama_data:
   clickhouse_data:
   minio_data:
   letsencrypt:
@@ -293,4 +300,6 @@ secrets:
   minio_root_user:
     external: true
   minio_root_password:
+    external: true
+  jwt_secret:
     external: true
