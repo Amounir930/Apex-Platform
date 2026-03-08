@@ -103,12 +103,11 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
+    entrypoint: ["sh", "-c", "export DATABASE_URL=\"postgres://postgres:$(cat /run/secrets/db_password)@db:5432/unleash?sslmode=disable\" && /unleash/unleash-server"]
     networks:
       - apex-network
-    environment:
-      # Unleash with explicit Postgres credentials from secrets
-      DATABASE_URL: "postgres://postgres:admin_secure_pass@db:5432/unleash?sslmode=disable"
-      DATABASE_SSL: "false"
+    secrets:
+      - db_password
     deploy:
       replicas: 1
       resources:
@@ -130,17 +129,11 @@ services:
       - apex-network
     deploy:
       replicas: 3
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.api.rule=Host(`api.60sec.shop`) || Host(`api.kitvet.com`)"
-        - "traefik.http.routers.api.entrypoints=websecure"
-        - "traefik.http.routers.api.tls.certresolver=myresolver"
-        - "traefik.http.services.api.loadbalancer.server.port=80"
-      resources:
-        limits:
-          memory: 512MB
-        reservations:
-          memory: 64MB
+    resources:
+      limits:
+        memory: 512MB
+      reservations:
+        memory: 64MB
 
   worker:
     image: traefik/whoami
@@ -148,11 +141,11 @@ services:
       - apex-network
     deploy:
       replicas: 2
-      resources:
-        limits:
-          memory: 512MB
-        reservations:
-          memory: 64MB
+    resources:
+      limits:
+        memory: 512MB
+      reservations:
+        memory: 64MB
 
   storefront:
     image: traefik/whoami
@@ -160,17 +153,11 @@ services:
       - apex-network
     deploy:
       replicas: 2
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.storefront.rule=Host(`60sec.shop`) || Host(`kitvet.com`) || Host(`localhost`)"
-        - "traefik.http.routers.storefront.entrypoints=websecure"
-        - "traefik.http.routers.storefront.tls.certresolver=myresolver"
-        - "traefik.http.services.storefront.loadbalancer.server.port=80"
-      resources:
-        limits:
-          memory: 512MB
-        reservations:
-          memory: 64MB
+    resources:
+      limits:
+        memory: 512MB
+      reservations:
+        memory: 64MB
 
   # --- AI & VECTOR SEARCH ---
   qdrant:
@@ -216,7 +203,7 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
+    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && chmod 777 /var/lib/signoz && until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
     networks:
       - apex-network
     environment:
