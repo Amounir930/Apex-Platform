@@ -107,7 +107,7 @@ services:
       DATABASE_NAME: unleash
       DATABASE_USERNAME: postgres
       DATABASE_SSL: "false"
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node dist/index.js"]
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node dist/server.js"]
     secrets:
       - db_password
     deploy:
@@ -190,11 +190,8 @@ services:
         reservations:
           memory: 512MB
     healthcheck:
-      # Use a simpler check for presence of process
-      test: ["CMD-SHELL", "ps aux | grep qdrant || exit 1"]
+      test: ["CMD-SHELL", "ls /qdrant/storage || exit 1"]
       interval: 20s
-      timeout: 10s
-      retries: 5
       start_period: 60s
 
   # --- OBSERVABILITY (SigNoz) ---
@@ -218,13 +215,11 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    command: ["--storage=clickhouse", "--clickhouse-url=signoz-clickhouse:9000"]
     networks:
       - apex-network
     environment:
-      # Using standard variables that signoz expects
-      STORAGE: "clickhouse"
-      CLICKHOUSE_URL: "signoz-clickhouse:9000"
+      STORAGE_TYPE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
       JWT_SECRET: "apex_jwt_secret_2026"
       SIGNOZ_LOCAL_DB_PATH: "/tmp/signoz.db"
     deploy:
