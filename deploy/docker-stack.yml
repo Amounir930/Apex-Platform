@@ -100,7 +100,7 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node dist/app.js"]
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node dist/index.js"]
     networks:
       - apex-network
     secrets:
@@ -117,7 +117,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:4242/health"]
       interval: 30s
-      start_period: 90s
+      start_period: 120s
 
   # --- APP SERVICES ---
   api:
@@ -208,11 +208,10 @@ services:
     healthcheck:
       test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
       interval: 20s
-      start_period: 90s
+      start_period: 120s
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    command: ["--storage=clickhouse", "--clickhouse-url=tcp://signoz-clickhouse:9000"]
     networks:
       - apex-network
     environment:
@@ -232,7 +231,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
       interval: 20s
-      start_period: 90s
+      start_period: 120s
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
