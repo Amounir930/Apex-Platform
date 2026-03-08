@@ -5,8 +5,8 @@ services:
   gateway:
     image: traefik:v3.1
     command:
-      - "--providers.docker.swarm=true"
-      - "--providers.docker.exposedbydefault=false"
+      - "--providers.swarm=true"
+      - "--providers.swarm.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
@@ -118,9 +118,6 @@ services:
         limits:
           cpus: '1.0'
           memory: 2GB
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
 
   worker:
     image: traefik/whoami
@@ -161,9 +158,6 @@ services:
         limits:
           cpus: '2.0'
           memory: 4GB
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 20s
 
   ollama:
     image: ollama/ollama:latest
@@ -183,9 +177,6 @@ services:
           #     count: 1
           #     capabilities: [gpu]
           memory: 4GB
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
 
   # --- OBSERVABILITY ---
   signoz-clickhouse:
@@ -202,8 +193,24 @@ services:
         reservations:
           memory: 4GB
 
+  signoz-query-service:
+    image: signoz/query-service:0.45.0
+    networks:
+      - apex-network
+    environment:
+      - ClickHouseUrl=tcp://signoz-clickhouse:9000
+      - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
+    volumes:
+      - signoz_db:/var/lib/signoz
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2GB
+
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
     deploy:
@@ -220,8 +227,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.signoz.rule=Host(`monitor.60sec.shop`)"
-        - "traefik.http.routers.signoz.entrypoints=websecure"
-        - "traefik.http.routers.signoz.tls.certresolver=myresolver"
+        - "traefik.http.routers.signoz.entrypoints=web"
         - "traefik.http.services.signoz.loadbalancer.server.port=3301"
       resources:
         limits:
@@ -241,6 +247,7 @@ volumes:
   clickhouse_data:
   minio_data:
   letsencrypt:
+  signoz_db:
 
 secrets:
   db_password:
