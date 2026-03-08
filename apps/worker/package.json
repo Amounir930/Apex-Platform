@@ -1,0 +1,17 @@
+{
+  "name": "@apex/worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "start": "node dist/main"
+  },
+  "dependencies": {
+    "@apex/config": "workspace:*",
+    "bullmq": "^5.41.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "typescript": "5.9.2"
+  }
+}

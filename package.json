@@ -8,6 +8,7 @@
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
+    "generate:example": "bun --filter @apex/config run generate:example",
     "prepare": "husky install"
   },
   "devDependencies": {

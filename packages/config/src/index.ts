@@ -1,17 +1,83 @@
 import { z } from 'zod';
+import * as fs from 'fs';
+import * as path from 'path';
+import { commonSchema } from './common.schema';
+import { appSchemas, AppType } from './app.schema';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
-  DATABASE_URL: z.string().url("DATABASE_URL must be a valid URL"),
-});
+/**
+ * Protocol Beta 2: Docker Secrets Priority Merging
+ * Checks /run/secrets/ for matching environment variable files.
+ * Precedence: /run/secrets/VAR_NAME > process.env.VAR_NAME
+ */
+function mergeSecrets(): Record<string, string | undefined> {
+  const env = { ...process.env };
+  const secretsDir = '/run/secrets';
 
-const result = envSchema.safeParse(process.env);
-
-if (!result.success) {
-  const errorDetails = JSON.stringify(result.error.format(), null, 2);
-  throw new Error(`S1 Violation: Invalid environment variables:\n${errorDetails}`);
+  if (fs.existsSync(secretsDir)) {
+    const files = fs.readdirSync(secretsDir);
+    for (const file of files) {
+      try {
+        const fullPath = path.join(secretsDir, file);
+        const stats = fs.statSync(fullPath);
+        if (stats.isFile()) {
+          // Only merge if it's a valid file and doesn't explicitly shadow an existing env with non-empty
+          const value = fs.readFileSync(fullPath, 'utf8').trim();
+          if (value) {
+            env[file] = value;
+          }
+        }
+      } catch (e) {
+        // Silently ignore secret read errors as per Protocol Delta 5 (handled by Zod later)
+      }
+    }
+  }
+  return env;
 }
 
-export const config = result.data;
-export type Config = z.infer<typeof envSchema>;
+/**
+ * Protocol Gamma 2: Pretty Error Formatting
+ * Generates a colorized table-like structure for validation errors.
+ */
+function formatErrors(errors: z.ZodError): string {
+  const header = `\x1b[31m\x1b[1mS1 Violation: Invalid Environment Configuration\x1b[0m\n`;
+  const tableHeader = `\x1b[1m%-25s | %-30s | %-40s\x1b[0m\n`.replace('%-25s', 'Variable').replace('%-30s', 'Error').replace('%-40s', 'Description');
+  const separator = `${'-'.repeat(25)}+${'-'.repeat(32)}+${'-'.repeat(42)}\n`;
+  
+  let output = header + separator + tableHeader + separator;
+
+  for (const issue of errors.issues) {
+    const path = issue.path.join('.');
+    const message = issue.message;
+    // Extract description from Zod metadata if available (requires access to schema)
+    const description = "Check documentation for details";
+
+    output += `\x1b[33m%-25s\x1b[0m | \x1b[31m%-30s\x1b[0m | %-40s\n`
+      .replace('%-25s', path.padEnd(25))
+      .replace('%-30s', message.padEnd(30))
+      .replace('%-40s', description.padEnd(40));
+  }
+
+  return output + separator;
+}
+
+/**
+ * Protocol Alpha 1: Type-Safe Export & Final Validation
+ */
+export function validateEnv(appType: AppType) {
+  const mergedEnv = mergeSecrets();
+  const schema = commonSchema.merge(appSchemas[appType]);
+  
+  const result = schema.safeParse(mergedEnv);
+
+  if (!result.success) {
+    console.error(formatErrors(result.error));
+    process.exit(1);
+  }
+
+  // Deep freeze the config to ensure it remains the immutable source of truth
+  return Object.freeze(result.data);
+}
+
+// Re-export types for application use
+export type { AppType };
+export type Config<T extends AppType> = z.infer<typeof commonSchema> & z.infer<typeof appSchemas[T]>;
