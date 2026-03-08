@@ -96,6 +96,7 @@ services:
       - apex-network
     environment:
       DATABASE_URL: "postgres://postgres:password@db:5432/unleash?sslmode=disable"
+      DATABASE_SSL: "false"
     deploy:
       resources:
         limits:
@@ -198,10 +199,10 @@ services:
     networks:
       - apex-network
     environment:
-      STORAGE_TYPE: clickhouse
-      CLICKHOUSE_URL: tcp://signoz-clickhouse:9000
-      SIGNOZ_LOCAL_DB_PATH: /var/lib/signoz/signoz.db
-      jwt_secret: "apex_jwt_secret_2026"
+      STORAGE_TYPE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
+      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
+      JWT_SECRET: "apex_jwt_secret_2026"
     volumes:
       - signoz_db:/var/lib/signoz
     deploy:
