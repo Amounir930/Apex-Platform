@@ -100,9 +100,15 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node dist/index.js"]
     networks:
       - apex-network
+    environment:
+      DATABASE_HOST: db
+      DATABASE_NAME: unleash
+      DATABASE_USERNAME: postgres
+      # Unleash doesn't natively support _FILE for password, 
+      # so we use a simple command trick to read it.
+      UNLEASH_SECRET_DATABASE_URL: "sh -c 'DATABASE_PASSWORD=$$(cat /run/secrets/db_password) && export DATABASE_URL=postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable && exec node dist/index.js'"
     secrets:
       - db_password
     deploy:
