@@ -100,7 +100,7 @@ services:
 
   unleash:
     image: unleashorg/unleash-server:latest
-    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec /unleash/unleash-server"]
+    entrypoint: ["sh", "-c", "export DATABASE_PASSWORD=$$(cat /run/secrets/db_password | tr -d '\\n\\r') && export DATABASE_URL=\"postgres://postgres:$$DATABASE_PASSWORD@db:5432/unleash?sslmode=disable\" && exec node index.js"]
     networks:
       - apex-network
     secrets:
@@ -212,13 +212,15 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
+    # Ensuring directory exists and has correct permissions
+    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && chmod 777 /var/lib/signoz && exec ./query-service"]
     networks:
       - apex-network
     environment:
-      STORAGE_TYPE: clickhouse
-      CLICKHOUSE_URL: tcp://signoz-clickhouse:9000
-      JWT_SECRET: apex_jwt_secret_2026
-      SIGNOZ_LOCAL_DB_PATH: /var/lib/signoz/signoz.db
+      STORAGE_TYPE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
+      JWT_SECRET: "apex_jwt_secret_2026"
+      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
     volumes:
       - signoz_db:/var/lib/signoz
     deploy:
