@@ -195,27 +195,21 @@ services:
           memory: 4GB
 
   signoz-query-service:
-    image: signoz/query-service:0.45.0
-    entrypoint: 
-      - "sh"
-      - "-c"
-      - |
-        export STORAGE_TYPE=clickhouse
-        export CLICKHOUSE_URL=tcp://signoz-clickhouse:9000
-        export SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
-        export JWT_SECRET=apex_jwt_secret_2026
-        echo "DEBUG: STORAGE_TYPE=$STORAGE_TYPE"
-        echo "DEBUG: CLICKHOUSE_URL=$CLICKHOUSE_URL"
-        ./query-service
+    image: "signoz/query-service:0.45.0"
     networks:
-      - apex-network
+      - "apex-network"
+    environment:
+      STORAGE_TYPE: "clickhouse"
+      CLICKHOUSE_URL: "tcp://signoz-clickhouse:9000"
+      SIGNOZ_LOCAL_DB_PATH: "/var/lib/signoz/signoz.db"
+      JWT_SECRET: "apex_jwt_secret_2026"
     volumes:
-      - signoz_db:/var/lib/signoz
+      - "signoz_db:/var/lib/signoz"
     deploy:
       resources:
         limits:
           cpus: '1.0'
-          memory: 2GB
+          memory: "2GB"
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
