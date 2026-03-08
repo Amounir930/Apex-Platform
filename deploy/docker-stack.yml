@@ -106,10 +106,7 @@ services:
     networks:
       - apex-network
     environment:
-      # Protocol 5: No hardcoded passwords. 
-      # Unleash doesn't support _FILE env vars natively for DB URL, 
-      # so we use a secret and a simple entrypoint wrap if needed, 
-      # or rely on the user having created the secret correctly.
+      # Unleash with explicit Postgres credentials from secrets
       DATABASE_URL: "postgres://postgres:admin_secure_pass@db:5432/unleash?sslmode=disable"
       DATABASE_SSL: "false"
     deploy:
@@ -122,7 +119,7 @@ services:
       restart_policy:
         condition: on-failure
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4242/health"]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4242/health"]
       interval: 30s
       start_period: 90s
 
@@ -219,7 +216,7 @@ services:
 
   signoz-query-service:
     image: signoz/query-service:0.45.0
-    entrypoint: ["sh", "-c", "until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
+    entrypoint: ["sh", "-c", "mkdir -p /var/lib/signoz && until getent hosts tasks.signoz-clickhouse; do sleep 5; done; ./query-service"]
     networks:
       - apex-network
     environment:
