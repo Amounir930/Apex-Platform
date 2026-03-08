@@ -212,6 +212,7 @@ services:
 
   signoz-query-service:
     image: "signoz/query-service:0.45.0"
+    command: ["sh", "-c", "until getent hosts signoz-clickhouse; do echo waiting for clickhouse dns; sleep 2; done; ./query-service"]
     networks:
       - "apex-network"
     environment:
@@ -234,7 +235,7 @@ services:
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:0.102.0
-    command: ["--config=/etc/otel-collector-config.yaml"]
+    command: ["sh", "-c", "until getent hosts signoz-query-service; do echo waiting for query-service dns; sleep 2; done; /otelcol --config=/etc/otel-collector-config.yaml"]
     networks:
       - apex-network
     volumes:
